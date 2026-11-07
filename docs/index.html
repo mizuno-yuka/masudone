@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'">
+  <title>MasuDone!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="ToDoリストをビンゴカードにして、終わったマスにスタンプを押していくアプリ。登録不要・無料。データはあなたのブラウザの中にだけ保存されます。">
+  <meta name="theme-color" content="#f6efd2">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="fonts/line-seed-jp-400.css">
+  <link rel="stylesheet" href="fonts/line-seed-jp-700.css">
+  <link rel="stylesheet" href="fonts/line-seed-jp-800.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1 class="logo" aria-label="MasuDone!"><span class="l1">M</span><span class="l2">a</span><span class="l3">s</span><span class="l4">u</span><span class="l5">D</span><span class="l6">o</span><span class="l1">n</span><span class="l2">e</span><span class="l3">!</span></h1>
+    <div class="board-switch">
+      <select id="boardSelect" aria-label="ボードを選ぶ"></select>
+      <button id="newBoardBtn" class="btn btn-yellow">＋ 新しいボード</button>
+      <button id="historyBtn" class="btn">履歴</button>
+    </div>
+  </header>
+  <div id="saveWarn" class="save-warn hidden" role="alert">保存できませんでした。ブラウザの保存が禁止されているか、容量がいっぱいかもしれません。「履歴」画面の「書き出す」でバックアップを取っておくと安心です。</div>
+
+  <main id="main">
+    <div id="emptyState" class="empty hidden">
+      <p>進行中のボードがありません。</p>
+      <button id="emptyNewBtn" class="btn btn-yellow">＋ ボードをつくる</button>
+    </div>
+
+    <section id="boardArea" class="hidden">
+      <div id="readonlyNote" class="readonly-note hidden">履歴を表示中(閲覧専用)</div>
+      <div class="board-title-row">
+        <span id="bingoCount" class="bingo-count hidden"></span>
+        <span id="progress" class="progress"></span>
+      </div>
+      <div class="grid-wrap">
+        <div class="peek peek-left" aria-hidden="true"><img src="img/mon-blue.png" alt="" draggable="false"></div>
+        <div class="peek peek-right" aria-hidden="true"><img src="img/mon-purple.png" alt="" draggable="false"></div>
+        <div id="grid" class="grid"></div>
+      </div>
+      <div class="toolbar">
+        <button id="renameBtn" class="btn btn-small">名前を変更</button>
+        <button id="archiveBtn" class="btn btn-small">アーカイブ</button>
+        <button id="unarchiveBtn" class="btn btn-small hidden">進行中に戻す</button>
+        <button id="deleteBtn" class="btn btn-small btn-danger">削除</button>
+      </div>
+    </section>
+
+    <section id="historyArea" class="hidden">
+      <h2 class="history-title">履歴</h2>
+      <p class="hint left">すべて完了したボードと、アーカイブしたボードがここに並びます。</p>
+      <div id="historyList" class="history-list"></div>
+
+      <div class="backup">
+        <h3>データのバックアップ</h3>
+        <p id="backupNote" class="backup-note"></p>
+        <div class="backup-actions">
+          <button id="exportBtn" class="btn btn-small">書き出す(ファイルに保存)</button>
+          <button id="importBtn" class="btn btn-small">読み込む(ファイルから復元)</button>
+          <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+        </div>
+        <p id="backupMsg" class="backup-msg" role="status"></p>
+      </div>
+    </section>
+  </main>
+
+  <!-- 新規ボード -->
+  <dialog id="newBoardDialog">
+    <form method="dialog" id="newBoardForm" class="dialog-body">
+      <h3>新しいボード</h3>
+      <label>ボード名
+        <input type="text" id="newBoardName" maxlength="30" placeholder="例：今週 / 修論">
+      </label>
+      <fieldset>
+        <legend>大きさ</legend>
+        <label class="radio"><input type="radio" name="size" value="3" checked> 3 × 3（9マス）</label>
+        <label class="radio"><input type="radio" name="size" value="5"> 5 × 5（25マス）</label>
+      </fieldset>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="newBoardCancel">キャンセル</button>
+        <button type="submit" class="btn btn-yellow">つくる</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 名前変更 -->
+  <dialog id="renameDialog">
+    <form method="dialog" id="renameForm" class="dialog-body">
+      <h3>ボード名を変更</h3>
+      <label>ボード名
+        <input type="text" id="renameInput" maxlength="30">
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn" id="renameCancel">キャンセル</button>
+        <button type="submit" class="btn btn-yellow">変更</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 確認 -->
+  <dialog id="confirmDialog">
+    <form method="dialog" class="dialog-body">
+      <h3 id="confirmTitle">確認</h3>
+      <p id="confirmMessage" class="confirm-message"></p>
+      <div class="dialog-actions">
+        <button type="submit" value="cancel" class="btn">キャンセル</button>
+        <button type="submit" value="ok" class="btn btn-danger" id="confirmOk">OK</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- マス編集(履歴では閲覧専用) -->
+  <dialog id="cellDialog">
+    <form method="dialog" id="cellForm" class="dialog-body">
+      <h3 id="cellDialogTitle">マスの編集</h3>
+      <label>タイトル
+        <input type="text" id="cellTitle" maxlength="60" placeholder="やること">
+      </label>
+      <label>締切日（任意）
+        <input type="date" id="cellDue">
+      </label>
+      <label>メモ（任意）
+        <textarea id="cellMemo" rows="4" placeholder="詳しいことを書いておこう"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="button" class="btn btn-stamp" id="stampBtn">スタンプを押す</button>
+        <span class="spacer"></span>
+        <button type="button" class="btn" id="cellCancel">閉じる</button>
+        <button type="submit" class="btn btn-yellow" id="cellSave">保存</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- お祝い演出 -->
+  <canvas id="confetti" aria-hidden="true"></canvas>
+  <div id="banner" class="banner hidden" aria-live="polite">
+    <div id="bannerMain" class="banner-main"></div>
+    <div id="bannerSub" class="banner-sub"></div>
+  </div>
+
+  <script src="store.js"></script>
+  <script src="celebrate.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+{
+  "name": "masudone",
+  "productName": "MasuDone",
+  "version": "1.0.0",
+  "description": "ToDoリストをビンゴカードにして、終わったマスにスタンプを押していくアプリ(Web版・デスクトップ版)",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win nsis",
+    "build:web": "node scripts/build-web.mjs"
+  },
+  "author": "MIZUNO Yuka",
+  "license": "MIT",
+  "devDependencies": {
+    "@fontsource/line-seed-jp": "^5.3.2",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "rcedit": "^5.0.2"
+  },
+  "build": {
+    "appId": "jp.masudone.app",
+    "productName": "MasuDone",
+    "copyright": "Copyright (c) 2026 MIZUNO Yuka",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "afterPack": "build/afterPack.js",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MasuDone!",
+      "artifactName": "MasuDone-Setup-${version}.exe",
+      "language": "1041"
+    }
+  }
+}
