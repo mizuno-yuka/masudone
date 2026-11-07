@@ -8,7 +8,7 @@ ToDoリストを **ビンゴカード** にして、終わったマスに **ス�
 
 **Web版(ブラウザで開くだけ・登録不要・無料)**
 
-> 公開後に、ここにURLを書きます:`https://(GitHubのユーザー名).github.io/masudone/`
+**https://mizuno-yuka.github.io/masudone/**
 
 - パソコンでもスマホでも使えます(Chrome・Edge・Safari・Firefox の最新版)
 - 一度開けば、ネットがなくても使えます(オフライン対応)
@@ -171,7 +171,7 @@ npm run build:web
 6. ブラウザで GitHub の自分の `masudone` リポジトリのページを開きます
 7. 「Settings → Pages」を開き、「Build and deployment」の「Source」を **Deploy from a branch** にして、「Branch」を **main**、フォルダを **/docs** にして「Save」を押します
 8. 1〜2分待つと、同じページの上のほうに公開URLが出ます(`https://<ユーザー名>.github.io/masudone/`)。そのURLを開いて、動くことを確認します
-9. このURLを、この README の「使ってみる」の部分に書きます
+9. このURLは、この README の「使ってみる」の部分に、すでに書いてあります(ユーザー名やリポジトリ名を変えたときは、書き直してください)
 
 ## 6. データの保存場所
 
