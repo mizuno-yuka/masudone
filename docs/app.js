@@ -11,6 +11,7 @@ let state = { version: 1, currentBoardId: null, boards: [] };
 let view = 'board'; // 'board'(ボード画面) か 'history'(履歴画面)。保存はしない
 let editingIndex = null; // いま編集中のマスの番号
 let lastStampedIndex = null; // 直前にスタンプしたマス(ポンッのアニメ用)
+let lastDroppedIndex = null; // 直前にドラッグで落としたマス(ぽんと落ちるアニメ用)
 
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const emptyCell = () => ({ title: '', due: '', memo: '', stamped: false });
@@ -136,7 +137,8 @@ function render() {
       + (isEmpty ? ' empty-cell' : '')
       + (cell.stamped ? ' stamped' : '')
       + (inLine.has(i) ? ' bingo' : '')
-      + (due ? ' has-due due-' + due.level : '');
+      + (due ? ' has-due due-' + due.level : '')
+      + (i === lastDroppedIndex ? ' dropped' : '');
     btn.setAttribute('aria-label', isEmpty ? `空のマス ${i + 1}` : `${cell.title}${cell.stamped ? '(完了)' : ''}${due ? '、締切 ' + due.text : ''}`);
 
     if (!isEmpty) {
@@ -166,10 +168,149 @@ function render() {
     }
     if (cell.stamped) btn.appendChild(buildStamp(i, i === lastStampedIndex));
     // 空のマスは履歴では開かない
-    if (!(ro && isEmpty)) btn.addEventListener('click', () => openCellDialog(i));
+    // (ドラッグを終えた直後のクリックは、編集画面を開かないよう無視する)
+    if (!(ro && isEmpty)) btn.addEventListener('click', () => { if (Date.now() - dragEndedAt < 350) return; openCellDialog(i); });
+    if (!ro && !isEmpty) attachDrag(btn, i);
     grid.appendChild(btn);
   });
   lastStampedIndex = null;
+  lastDroppedIndex = null;
+}
+
+// ===== マスのドラッグ移動 =====
+// 書き込んだマスをつかんで、別のマスに落とすと移動できる。
+//  ・落とした先が空のマス → そこへ移動(元のマスは空になる)
+//  ・落とした先に内容がある → 2つを入れ替える
+//  ・スタンプ・締切・メモも、いっしょに移動する
+// マウスは「少し動かす」と始まり、スマホ/タブレットは「長押し」で始まる(ふつうのスクロールと区別するため)。
+// ふつうにクリック/タップしただけのときは、これまでどおり編集画面が開く。
+const DRAG_MOVE_PX = 6;       // マウスでドラッグが始まる距離
+const DRAG_HOLD_MS = 280;     // タッチで「長押し」とみなす時間
+const TOUCH_CANCEL_PX = 10;   // 長押しの前にこれだけ動いたら、スクロールとみなしてやめる
+let drag = null;              // ドラッグ中の情報(していないときは null)
+let dragEndedAt = 0;          // ドラッグが終わった時刻(直後のクリックを無視するため)
+
+const blockTouchScroll = (e) => { if (drag && drag.started) e.preventDefault(); };
+
+function attachDrag(btn, index) {
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0 || drag) return;
+    const board = currentBoard();
+    if (!board || isReadonly(board) || board.cells[index].title.trim() === '') return;
+    drag = {
+      index, btn, pointerId: e.pointerId, touch: e.pointerType !== 'mouse',
+      startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY,
+      started: false, ghost: null, target: -1, offX: 0, offY: 0, timer: null,
+    };
+    if (drag.touch) drag.timer = setTimeout(() => { if (drag && !drag.started) beginDrag(); }, DRAG_HOLD_MS);
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', onDragEnd);
+    document.addEventListener('pointercancel', onDragCancel);
+    document.addEventListener('keydown', onDragKey);
+  });
+  // 長押しで出る右クリックメニューを止める
+  btn.addEventListener('contextmenu', (e) => { if (drag && drag.touch) e.preventDefault(); });
+}
+
+function beginDrag() {
+  if (!drag || drag.started) return;
+  drag.started = true;
+  const r = drag.btn.getBoundingClientRect();
+  drag.offX = drag.x - r.left;
+  drag.offY = drag.y - r.top;
+  const ghost = drag.btn.cloneNode(true);   // 見た目そのままのコピーを、指/マウスについてこさせる
+  ghost.classList.add('drag-ghost');
+  ghost.removeAttribute('title');
+  ghost.setAttribute('aria-hidden', 'true');
+  ghost.style.width = r.width + 'px';
+  ghost.style.height = r.height + 'px';
+  $('grid').appendChild(ghost);   // ボードの中に置く(3×3/5×5それぞれの文字サイズや札の規則がそのまま効く)。fixed なので配置には影響しない
+  drag.ghost = ghost;
+  drag.btn.classList.add('dragging');
+  document.body.classList.add('is-dragging');
+  document.addEventListener('touchmove', blockTouchScroll, { passive: false });
+  if (navigator.vibrate) { try { navigator.vibrate(12); } catch { /* 何もしない */ } }
+  moveGhost();
+}
+
+function moveGhost() {
+  if (!drag || !drag.ghost) return;
+  drag.ghost.style.left = (drag.x - drag.offX) + 'px';
+  drag.ghost.style.top = (drag.y - drag.offY) + 'px';
+  // いま指/マウスの下にあるマスを探して、落とせる場所を光らせる
+  const el = document.elementFromPoint(drag.x, drag.y);
+  const cellEl = el && el.closest ? el.closest('#grid .cell') : null;
+  const idx = cellEl ? Array.prototype.indexOf.call($('grid').children, cellEl) : -1;
+  const target = idx === drag.index ? -1 : idx;
+  if (target !== drag.target) {
+    const kids = $('grid').children;
+    if (drag.target >= 0 && kids[drag.target]) kids[drag.target].classList.remove('drop-target');
+    if (target >= 0 && kids[target]) kids[target].classList.add('drop-target');
+    drag.target = target;
+  }
+}
+
+function onDragMove(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.started) {
+    const dist = Math.hypot(drag.x - drag.startX, drag.y - drag.startY);
+    if (drag.touch) { if (dist > TOUCH_CANCEL_PX) endDrag(); }   // 長押しの前に動いた = スクロール
+    else if (dist > DRAG_MOVE_PX) beginDrag();
+    return;
+  }
+  e.preventDefault();
+  moveGhost();
+}
+
+function onDragEnd(e) {
+  if (!drag || e.pointerId !== drag.pointerId) return;
+  const d = drag;
+  const wasStarted = d.started;
+  if (wasStarted) { drag.x = e.clientX; drag.y = e.clientY; moveGhost(); }
+  const from = d.index, to = d.target;
+  endDrag();
+  if (wasStarted) {
+    dragEndedAt = Date.now();
+    if (to >= 0 && to !== from) moveCell(from, to);
+  }
+}
+
+function onDragCancel(e) { if (drag && e.pointerId === drag.pointerId) endDrag(); }
+function onDragKey(e) { if (e.key === 'Escape' && drag) endDrag(); }
+
+function endDrag() {
+  if (!drag) return;
+  clearTimeout(drag.timer);
+  if (drag.started) {
+    dragEndedAt = Date.now();
+    drag.btn.classList.remove('dragging');
+    const kids = $('grid').children;
+    if (drag.target >= 0 && kids[drag.target]) kids[drag.target].classList.remove('drop-target');
+  }
+  if (drag.ghost) drag.ghost.remove();
+  document.body.classList.remove('is-dragging');
+  document.removeEventListener('touchmove', blockTouchScroll);
+  document.removeEventListener('pointermove', onDragMove);
+  document.removeEventListener('pointerup', onDragEnd);
+  document.removeEventListener('pointercancel', onDragCancel);
+  document.removeEventListener('keydown', onDragKey);
+  drag = null;
+}
+
+// from のマスを to のマスへ。to に内容があれば入れ替える
+function moveCell(from, to) {
+  const board = currentBoard();
+  if (!board || isReadonly(board)) return;
+  const before = new Set(getCompleteLines(board).map((l) => l.key));
+  const cells = board.cells;
+  [cells[from], cells[to]] = [cells[to], cells[from]];
+  lastDroppedIndex = to;
+  save();
+  render();
+  // 移動でビンゴが新しくそろったら、スタンプのときと同じようにお祝い
+  const after = getCompleteLines(board);
+  if (after.some((l) => !before.has(l.key))) setTimeout(() => window.celebrate('bingo', after.length), 250);
 }
 
 // ===== スタンプ(モンスターが「できた!」と顔を出す) =====
@@ -371,7 +512,7 @@ function updateStampButton() {
   const hasTitle = $('cellTitle').value.trim() !== '';
   const btn = $('stampBtn');
   btn.disabled = !hasTitle;
-  btn.textContent = cell.stamped ? 'スタンプを取り消す' : 'スタンプを押す';
+  btn.textContent = cell.stamped ? 'スタンプを\n取り消す' : 'スタンプを押す'; // 取り消すときは2行(CSSで改行を有効にしている)
   btn.classList.toggle('is-on', cell.stamped);
   btn.title = hasTitle ? '' : 'タイトルを書くとスタンプを押せます';
 }
@@ -418,7 +559,7 @@ $('stampBtn').addEventListener('click', () => {
 });
 
 // 日付をまたいだあとにアプリへ戻ったとき、締切の表示を更新する
-window.addEventListener('focus', () => { if (!$('cellDialog').open) render(); });
+window.addEventListener('focus', () => { if (!$('cellDialog').open && !drag) render(); });
 
 // ===== バックアップ(書き出し / 読み込み) =====
 const BACKUP_NOTE = {

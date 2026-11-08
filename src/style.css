@@ -387,3 +387,37 @@ label.radio { flex-direction: row; align-items: center; gap: 8px; font-size: 15p
   .banner.full .banner-main { font-size: 52px; }
   .banner-sub { font-size: 15px; }
 }
+
+/* ===== マスのドラッグ移動 ===== */
+.cell { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: manipulation; }
+.cell:not(.empty-cell) { cursor: grab; }
+body.is-dragging, body.is-dragging * { cursor: grabbing !important; -webkit-user-select: none; user-select: none; }
+.cell.dragging { opacity: .3; transform: scale(.96); box-shadow: none; }
+.cell.drop-target {
+  outline: 4px dashed var(--sky); outline-offset: 3px;
+  background: #e3f3ff; transform: scale(1.05); z-index: 2;
+}
+.cell.empty-cell.drop-target { background: #dff0ff; border-style: solid; }
+.cell.drag-ghost {
+  position: fixed; z-index: 70; margin: 0; pointer-events: none; opacity: .95; cursor: grabbing;
+  transform: rotate(4deg) scale(1.06); box-shadow: 8px 10px 0 rgba(29, 29, 43, .35);
+  transition: none; animation: none;
+}
+.cell.dropped { animation: dropIn .38s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes dropIn { from { transform: scale(.82); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .cell.dropped { animation: none; } }
+
+/* ===== 編集カードのボタン:改行しない。ただし「スタンプを取り消す」だけは2行 ===== */
+.dialog-actions .btn { white-space: nowrap; flex-shrink: 0; }
+.dialog-actions #stampBtn.is-on {
+  white-space: pre; line-height: 1.25; text-align: center;
+  padding-top: 5px; padding-bottom: 5px; border-radius: 20px;
+}
+
+/* 狭い画面(スマホ)でも、編集カードの3つのボタンが横にはみ出さないようにする */
+@media (max-width: 480px) {
+  .dialog-actions { gap: 8px; }
+  .dialog-actions .btn { padding: 8px 12px; font-size: 14px; }
+  .dialog-actions #stampBtn.is-on { padding-top: 5px; padding-bottom: 5px; }
+  .dialog-body { padding: 18px 18px; }
+}
