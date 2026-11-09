@@ -30,35 +30,14 @@ body {
   min-height: 100vh;
 }
 
-/* ===== ボードの横から顔を出すモンスター(左右に1体ずつ) ===== */
+/* ===== ボードの左右から顔を出す、赤いモンスター(動きは peek.js) ===== */
 .grid-wrap { position: relative; }
 .grid { position: relative; z-index: 1; }       /* ボードが手前。モンスターは後ろから顔だけ出す */
-.peek { position: absolute; z-index: 0; pointer-events: none; }
+.peek-layer { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.peek { position: absolute; width: 30%; pointer-events: none; will-change: transform; visibility: hidden; }
 .peek img { display: block; width: 100%; height: auto; }
-.peek-left  { left: -25%;  top: 46%; width: 26%; transform-origin: 100% 60%; animation: peekL 9s ease-in-out infinite; }
-.peek-right { right: -26%; top: 12%; width: 25%; transform-origin: 0% 60%;   animation: peekR 9s ease-in-out infinite -4.5s; }
-/* ひょっこり出て、ゆれて、すっと引っこむ */
-@keyframes peekL {
-  0%, 100% { transform: translateX(62%) rotate(-4deg); }
-  14%      { transform: translateX(0) rotate(-12deg); }
-  24%      { transform: translateX(0) rotate(-8deg); }
-  34%      { transform: translateX(0) rotate(-13deg); }
-  72%      { transform: translateX(0) rotate(-9deg); }
-  86%      { transform: translateX(62%) rotate(-4deg); }
-}
-@keyframes peekR {
-  0%, 100% { transform: translateX(-62%) rotate(4deg); }
-  14%      { transform: translateX(0) rotate(12deg); }
-  24%      { transform: translateX(0) rotate(8deg); }
-  34%      { transform: translateX(0) rotate(13deg); }
-  72%      { transform: translateX(0) rotate(9deg); }
-  86%      { transform: translateX(-62%) rotate(4deg); }
-}
-@media (prefers-reduced-motion: reduce) {
-  .peek-left  { animation: none; transform: rotate(-10deg); }
-  .peek-right { animation: none; transform: rotate(10deg); }
-}
-@media (max-width: 700px) { .peek { display: none; } }
+/* 左右の位置は peek.js が、出るたびに決める */
+@media (max-width: 700px) { .peek-layer { display: none; } }
 html, body { overflow-x: hidden; }
 main, .topbar { position: relative; z-index: 1; }
 

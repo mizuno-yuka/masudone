@@ -3,12 +3,12 @@
 // オフライン対応(Service Worker)。
 // 一度開いたファイルを覚えておき、次からはネットがなくても開けるようにする。
 // 新しいバージョンを公開したら、下の VERSION の数字を上げる(古い記憶が入れ替わる)。
-const VERSION = 'v3';
+const VERSION = 'v5';
 const CACHE = `masudone-${VERSION}`;
 
 // 最初に覚えておくファイル(フォントの細かい分割ファイルは、使われたときに自動で覚える)
 const CORE = [
-  './', 'index.html', 'style.css', 'app.js', 'celebrate.js', 'store.js',
+  './', 'index.html', 'style.css', 'app.js', 'celebrate.js', 'peek.js', 'store.js',
   'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
   'fonts/line-seed-jp-400.css', 'fonts/line-seed-jp-700.css', 'fonts/line-seed-jp-800.css',
   'img/mon-blue.png', 'img/mon-yellow.png', 'img/mon-teal.png',

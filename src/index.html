@@ -39,8 +39,7 @@
         <span id="progress" class="progress"></span>
       </div>
       <div class="grid-wrap">
-        <div class="peek peek-left" aria-hidden="true"><img src="img/mon-blue.png" alt="" draggable="false"></div>
-        <div class="peek peek-right" aria-hidden="true"><img src="img/mon-purple.png" alt="" draggable="false"></div>
+        <div id="peekLayer" class="peek-layer" aria-hidden="true"></div>   <!-- 赤いモンスターが顔を出す層(peek.js が作る) -->
         <div id="grid" class="grid"></div>
       </div>
       <div class="toolbar">
@@ -145,6 +144,7 @@
 
   <script src="store.js"></script>
   <script src="celebrate.js"></script>
+  <script src="peek.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

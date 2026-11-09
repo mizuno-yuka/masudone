@@ -218,6 +218,7 @@ C:\Users\<ユーザー名>\AppData\Roaming\MasuDone\data.json
 | `scripts/` | Web版の公開用フォルダを作るプログラム |
 | `src/app.js` | ボードやスタンプ、ビンゴ判定の動き |
 | `src/celebrate.js` | 紙吹雪やバナーなどのお祝い演出 |
+| `src/peek.js` | ボードの左右から、赤いモンスターが顔を出す動き |
 | `src/img/` | 背景・スタンプ・お祝いに登場するモンスターの画像(6体。ゆうさんが用意した画像から切り抜いたもの) |
 | `src/fonts/` | 同梱しているフォント「LINE Seed JP」(SIL Open Font License。ライセンス文は `LICENSE-OFL.txt`) |
 | `build/` | アイコンと、インストーラー作成用の設定 |
