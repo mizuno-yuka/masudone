@@ -159,6 +159,24 @@ npm run build:web
 
 さらに、**変更を公開したあとにオフライン用の記憶を入れ替える**ために、`src/sw.js` の中の `const VERSION = 'v1';` の数字を `v2`, `v3` …と上げてから実行してください(上げ忘れると、前に開いた人の画面に、古い版が残ることがあります)。
 
+### 変更を公開サイトに反映するとき(2回目以降・いちばんよく使う手順)
+
+この `MasuDone` フォルダ(`C:\MasuDone`)が、そのまま GitHub のリポジトリになっています。
+
+1. `src` の中のプログラムを変更します(ふだんは、Claude に頼んで変更してもらいます)
+2. `src/sw.js` の `const VERSION = 'v2';` の数字を、1つ上げます(`v3` など)
+3. ターミナルで、公開用フォルダを作り直します
+
+```bash
+npm run build:web
+```
+
+4. GitHub Desktop を開き、「Changes」に出ている変更を確認して、「Summary」に内容を書き、「Commit to main」を押します
+5. 上の「Push origin」を押します
+6. 1〜2分ほどで、公開サイトに反映されます(反映されないときは、ページを2回、再読み込みしてください)
+
+インストーラー(.exe)は、公開サイトとは別なので、必要なときに `npm run build` で作り直します(`dist` フォルダは GitHub には載りません)。
+
 ### 初めて公開するとき(GitHub Desktop を使う方法)
 
 1. **GitHub Desktop** をインストールして、GitHub のアカウントでサインインします(https://desktop.github.com/)
