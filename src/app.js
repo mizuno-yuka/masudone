@@ -170,7 +170,7 @@ function render() {
     // 空のマスは履歴では開かない
     // (ドラッグを終えた直後のクリックは、編集画面を開かないよう無視する)
     if (!(ro && isEmpty)) btn.addEventListener('click', () => { if (Date.now() - dragEndedAt < 350) return; openCellDialog(i); });
-    if (!ro && !isEmpty) attachDrag(btn, i);
+    if (!ro && !isEmpty && !cell.stamped) attachDrag(btn, i);   // スタンプを押したマスは動かせない
     grid.appendChild(btn);
   });
   lastStampedIndex = null;
@@ -196,7 +196,7 @@ function attachDrag(btn, index) {
   btn.addEventListener('pointerdown', (e) => {
     if (e.button !== 0 || drag) return;
     const board = currentBoard();
-    if (!board || isReadonly(board) || board.cells[index].title.trim() === '') return;
+    if (!board || isReadonly(board) || board.cells[index].title.trim() === '' || board.cells[index].stamped) return;
     drag = {
       index, btn, pointerId: e.pointerId, touch: e.pointerType !== 'mouse',
       startX: e.clientX, startY: e.clientY, x: e.clientX, y: e.clientY,
@@ -241,7 +241,9 @@ function moveGhost() {
   const el = document.elementFromPoint(drag.x, drag.y);
   const cellEl = el && el.closest ? el.closest('#grid .cell') : null;
   const idx = cellEl ? Array.prototype.indexOf.call($('grid').children, cellEl) : -1;
-  const target = idx === drag.index ? -1 : idx;
+  const board = currentBoard();
+  const blocked = idx >= 0 && board && board.cells[idx] && board.cells[idx].stamped;   // スタンプ済みのマスには落とせない
+  const target = (idx === drag.index || blocked) ? -1 : idx;
   if (target !== drag.target) {
     const kids = $('grid').children;
     if (drag.target >= 0 && kids[drag.target]) kids[drag.target].classList.remove('drop-target');
@@ -298,19 +300,17 @@ function endDrag() {
   drag = null;
 }
 
-// from のマスを to のマスへ。to に内容があれば入れ替える
+// from のマスを to のマスへ。to に内容があれば入れ替える。
+// スタンプを押したマスは動かせない(つかめない・落とし先にもならない)ので、ビンゴのラインは移動では変わらない。
 function moveCell(from, to) {
   const board = currentBoard();
   if (!board || isReadonly(board)) return;
-  const before = new Set(getCompleteLines(board).map((l) => l.key));
   const cells = board.cells;
+  if (cells[from].stamped || cells[to].stamped) return;
   [cells[from], cells[to]] = [cells[to], cells[from]];
   lastDroppedIndex = to;
   save();
   render();
-  // 移動でビンゴが新しくそろったら、スタンプのときと同じようにお祝い
-  const after = getCompleteLines(board);
-  if (after.some((l) => !before.has(l.key))) setTimeout(() => window.celebrate('bingo', after.length), 250);
 }
 
 // ===== スタンプ(モンスターが「できた!」と顔を出す) =====
